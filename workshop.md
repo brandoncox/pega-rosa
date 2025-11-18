@@ -18,24 +18,34 @@ By the end of the workshop, you’ll have hands-on experience deploying Pega on 
 Let’s get started and see what’s possible when Pega meets OpenShift!
 
 # Exercise 1 - Prepare Pega install
-To deploy Pega, we need to prepare the environment to install and run the workload. Clone the workshop to your bastion host and execute the workshop from inside the pega-rosa folder.
+1) To deploy Pega, we need to prepare the environment to install and run the workload. Clone the workshop to your bastion host and execute the workshop from inside the pega-rosa folder.
 ```bash
 git clone https://github.com/brandoncox/pega-rosa && cd pega-rosa
 ```
 
-We need to create a project where we can deploy our Pega containers and its dependencies.
+2) You will need the Helm and oc CLI if you do not already have them. ***Helm*** is a package manager that is used to manage Kubernetes applications. ***oc*** is the command line tool that you use to interact with the OpenShift API. Be sure to grab the proper versions.
+
+```bash
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+chmod 700 get_helm.sh
+./get_helm.sh
+```
+
+To install the oc command line tool, follow the documentation: https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html/cli_tools/openshift-cli-oc
+
+3) We need to create a project where we can deploy our Pega containers and its dependencies.
 
 ```bash
 oc new-project pega
 ```
 
-The Pega installer pod is very large and requires a machine large enough to schedule it. Using the ROSA CLI create a new MachinePool of the larger instance type
+4) The Pega installer pod is very large and requires a machine large enough to schedule it. Using the ROSA CLI create a new MachinePool of the larger instance type
 
 Find the cluster name printed in the output
 ```bash
 rosa list cluster
 ```
-Create a machinepool with a 4xlarge instance type using the cluster name above
+5) Create a machinepool with a 4xlarge instance type using the cluster name above
 ```bash
 rosa create machinepool --cluster=${CLUSTER_NAME} --name=big --replicas=1 --instance-type=m6a.4xlarge
 ```
@@ -122,8 +132,13 @@ Helm is the package manager for Kubernetes, allowing you to deploy and manage ap
 # Exercise 2: Deploy components required by Pega
 Pega has a dependency on various external services in order to run. These services (Kafka, Postges, OpenSearch) can also be deployed on OpenShift in containers using the various methods described above.
 
+In this section we will get comfortable with the oc CLI and learn new concepts related to OpenShift. 
+
 ## Deploy OpenSearch using Helm charts
-1) Assign required privileges for the service account
+1) Assign required privileges for the service account.
+
+Similar to the way that RBAC resources control user access, administrators can use security context constraints (SCCs) to control permissions for pods. These permissions determine the actions that a pod can perform and what resources it can access. You can use SCCs to define a set of conditions that a pod must run with to be accepted into the system.
+
 ```bash
 oc adm policy add-scc-to-user privileged -z default
 ```
@@ -132,23 +147,33 @@ oc adm policy add-scc-to-user privileged -z default
 ```bash
 oc apply -f opensearch.yaml
 ```
+
 3) Using Helm charts, we will deploy OpenSearch
+   
 ```bash
 helm repo add opensearch https://opensearch-project.github.io/helm-charts/
 
 helm install opensearch opensearch/opensearch --version 2.17.0 --namespace pega
-
-oc scale statefulset opensearch-cluster-master --replicas=0
 ```
-4) We need to set environment variables for the OpenSearch Stateful Set. We will explain more of the differences between StatefulSets, Deployments, and other mechanisms for managing Kubernetes applications in the next section.
+
+4) Scale the number of pods down to 0 in order to apply the new password and SSL configurations for deployment. 
+```bash
+   oc scale statefulset opensearch-cluster-master --replicas=0
+```
+5) We need to set environment variables for the OpenSearch Stateful Set. We will explain more of the differences between StatefulSets, Deployments, and other mechanisms for managing Kubernetes applications in the next section.
+
+There are several ways to provide configurations to your OpenShift deployments.
+- Environment Variables: You can use Environment Variables to inject simple values into a project.
+- Config Maps: When you need to map a file, or a set of files ex: property files, SSL certificates, you should use a Config Map.
+- Secrets: Secrets allow you to attach sensitive information, such as password or tokens, to a deployment. 
    
 ```bash
-# Add a password and disable SSL
 oc set env statefulset/opensearch-cluster-master OPENSEARCH_INITIAL_ADMIN_PASSWORD=Openshift123!
 oc set env statefulset/opensearch-cluster-master plugins.security.disabled=true
 oc set env statefulset/opensearch-cluster-master plugins.security.ssl.http.enabled=false
-
-# Scale pods down before adding environment variables
+```
+6) Scale pods up after adding environment variables
+```bash
 oc scale statefulset opensearch-cluster-master --replicas=3
 ```
 ## Deploy Postgres using YAML
