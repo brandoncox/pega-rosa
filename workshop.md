@@ -197,11 +197,13 @@ Pega requires a Kafka broker to be set up. For this lab we will install the Red 
    
    <img src="images/image-1.png" width="200" height=200/>
 
-3) Once the operator deploys you should have options to create different resources. Select ***KafkaNodePool*** and click ***Create KafkaNodePool***
+3) ***IMPORTANT!!!!*** Install the operator in the ***pega*** namespace
+
+4) Once the operator deploys you should have options to create different resources. Select ***KafkaNodePool*** and click ***Create KafkaNodePool***
 
 ![alt text](images/kafka-node-pool.png)
 
-4) Populate the form, only changing the following values:
+5) Populate the form, only changing the following values:
 ```
     Name: pega-kafka-pool
     Label: strimzi.io/cluster=pega-kafka-cluster
@@ -209,15 +211,15 @@ Pega requires a Kafka broker to be set up. For this lab we will install the Red 
 
 <img src="images/kafka-node-pool-form.png" height=500 width= 500/>
 
-1) Then go back to the original screen to create a ***Kafka*** resource
+6) Then go back to the original screen to create a ***Kafka*** resource
    
 ![alt text](images/kafka.png)
 
-6) Create a kafka resource named ***pega-kafka-cluster***. Leave all of the defaults and click Create to proceed.
+7) Create a kafka resource named ***pega-kafka-cluster***. Leave all of the defaults and click Create to proceed.
 
 <img src="images/image-3.png" height=500 width=500 />
 
-1) The Kafka broker will be running when the status of the object shows READY:
+8) The Kafka broker will be running when the status of the object shows READY:
 
 ![alt text](images/kafka-ready.png)
 
